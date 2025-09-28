@@ -1,0 +1,83 @@
+{
+  "strategy": "single_domain_double_shot",
+  "prompt_prefix": "PRAGMA foreign_keys = ON;\n\nCREATE TABLE `Player`(\n    `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY,\n    `player_tag` VARCHAR(255) NOT NULL UNIQUE,\n    `country` VARCHAR(255) NOT NULL\n);\nCREATE TABLE `Character`(\n    `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY,\n    `name` VARCHAR(255) NOT NULL UNIQUE\n);\nCREATE TABLE `RankList`(\n    `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY,\n    `rank_date` DATE NOT NULL\n);\nCREATE TABLE `TierList`(\n    `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY,\n    `tier_date` DATE NOT NULL\n);\nCREATE TABLE `PlayerRanking`(\n    `player_id` BIGINT UNSIGNED NOT NULL,\n    `rank_list_id` BIGINT UNSIGNED NOT NULL,\n    `rank` INT NOT NULL,\n    PRIMARY KEY(`player_id`, `rank_list_id`),\n    FOREIGN KEY(`rank_list_id`) REFERENCES `RankList`(`id`),\n    FOREIGN KEY(`player_id`) REFERENCES `Player`(`id`)\n);\nCREATE TABLE `TierEntry`(\n    `character_id` BIGINT UNSIGNED NOT NULL,\n    `list_id` BIGINT UNSIGNED NOT NULL,\n    `rank` TINYINT NOT NULL,\n    `tier` VARCHAR(255) NULL,\n    PRIMARY KEY(`character_id`, `list_id`),\n    FOREIGN KEY(`list_id`) REFERENCES `TierList`(`id`),\n    FOREIGN KEY(`character_id`) REFERENCES `Character`(`id`)\n);\nCREATE TABLE `Main`(\n    `player_id` BIGINT UNSIGNED NOT NULL,\n    `character_id` BIGINT UNSIGNED NOT NULL,\n    `rank_list_id` BIGINT UNSIGNED NOT NULL,\n    PRIMARY KEY(`player_id`, `character_id`, `rank_list_id`),\n    FOREIGN KEY(`player_id`) REFERENCES `Player`(`id`),\n    FOREIGN KEY(`character_id`) REFERENCES `Character`(`id`),\n    FOREIGN KEY(`rank_list_id`) REFERENCES `RankList`(`id`)\n); What has Yoshi's lowest ranking been? SELECT MAX(`rank`) AS LowestRank FROM `Character` LEFT JOIN TierEntry ON `Character`.id = TierEntry.character_id GROUP BY `Character`.name HAVING `Character`.name = 'Yoshi'; +  Give me a sqlite SELECT statment that answers the question. Only respond with sqlite syntax. If there is an error do not explain it! Remember to quote reserved keywords like Character and rank with backticks.",
+  "questionResults": [
+    {
+      "question": "Who is currently the highest-ranked character in the game?",
+      "sql": "\nSELECT `Character`.name \nFROM `Character` \nJOIN `TierEntry` ON `Character`.id = `TierEntry`.character_id \nJOIN (SELECT MAX(`tier_date`) AS latest_date FROM `TierList`) AS Latest ON `TierEntry`.list_id = (SELECT `id` FROM `TierList` WHERE `tier_date` = Latest.latest_date) \nORDER BY `TierEntry`.`rank` ASC \nLIMIT 1;\n",
+      "queryRawResponse": "[('Fox',)]",
+      "friendlyResponse": "The highest-ranked character in the game is currently \"Fox.\"",
+      "error": "None"
+    },
+    {
+      "question": "What players have been rank 1?",
+      "sql": "\nSELECT `player_tag` \nFROM `Player` \nJOIN `PlayerRanking` ON `Player`.id = `PlayerRanking`.player_id \nWHERE `rank` = 1;\n",
+      "queryRawResponse": "[('Mango',), ('Mango',), ('Armada',), ('Armada',), ('Hungrybox',), ('Hungrybox',), ('Hungrybox',), ('Zain',), ('Cody Schwab',), ('Zain',)]",
+      "friendlyResponse": "The players who have been ranked 1 at some point are Mango, Armada, Hungrybox, Zain, and Cody Schwab.",
+      "error": "None"
+    },
+    {
+      "question": "How many players have been rank 1 while one of their mains was also rank 1?",
+      "sql": "\nSELECT COUNT(DISTINCT Player.id) AS PlayerCount\nFROM Player\nJOIN PlayerRanking ON Player.id = PlayerRanking.player_id\nJOIN Main ON Player.id = Main.player_id AND PlayerRanking.rank_list_id = Main.rank_list_id\nJOIN TierEntry ON Main.character_id = TierEntry.character_id AND Main.rank_list_id = TierEntry.list_id\nWHERE PlayerRanking.rank = 1 AND TierEntry.rank = 1;\n",
+      "queryRawResponse": "[(2,)]",
+      "friendlyResponse": "Based on the results from your query, there are 2 players who have been ranked 1 while one of their main characters was also ranked 1.",
+      "error": "None"
+    },
+    {
+      "question": "What has Yoshi's lowest ranking been?",
+      "sql": "\nSELECT MAX(`rank`) AS LowestRank \nFROM `Character` \nLEFT JOIN `TierEntry` ON `Character`.id = `TierEntry`.character_id \nWHERE `Character`.`name` = 'Yoshi';\n",
+      "queryRawResponse": "[(18,)]",
+      "friendlyResponse": "Yoshi's lowest ranking has been 18th in the Tier List.",
+      "error": "None"
+    },
+    {
+      "question": "What has Yoshi's highest ranking been?",
+      "sql": "\nSELECT MIN(`rank`) AS HighestRank FROM `Character` LEFT JOIN TierEntry ON `Character`.id = TierEntry.character_id GROUP BY `Character`.name HAVING `Character`.name = 'Yoshi';\n",
+      "queryRawResponse": "[(10,)]",
+      "friendlyResponse": "Yoshi's highest ranking has been 10th.",
+      "error": "None"
+    },
+    {
+      "question": "What character has the biggest difference in lowest and highest ranking?",
+      "sql": "\nSELECT `name`, MAX(`rank`) - MIN(`rank`) AS `rank_difference`\nFROM `Character`\nLEFT JOIN `TierEntry` ON `Character`.`id` = `TierEntry`.`character_id`\nGROUP BY `Character`.`name`\nORDER BY `rank_difference` DESC\nLIMIT 1;\n",
+      "queryRawResponse": "[('Yoshi', 8)]",
+      "friendlyResponse": "The character with the biggest difference between their lowest and highest rankings is Yoshi, with a difference of 8 ranks.",
+      "error": "None"
+    },
+    {
+      "question": "How many players have ever been in the top 100?",
+      "sql": "\nSELECT COUNT(DISTINCT `player_id`) AS TopPlayers\nFROM `PlayerRanking`\nWHERE `rank` <= 100;\n",
+      "queryRawResponse": "[(346,)]",
+      "friendlyResponse": "Based on the results from your query, 346 players have been in the top 100.",
+      "error": "None"
+    },
+    {
+      "question": "What are the top 5 characters right now?",
+      "sql": "\nSELECT `Character`.`name`, `TierEntry`.rank\nFROM `Character`\nJOIN `TierEntry` ON `Character`.`id` = `TierEntry`.`character_id`\nJOIN `TierList` ON `TierEntry`.`list_id` = `TierList`.`id`\nORDER BY `TierList`.`tier_date` DESC, `TierEntry`.`rank` ASC\nLIMIT 5;\n",
+      "queryRawResponse": "[('Fox', 1), ('Marth', 2), ('Jigglypuff', 3), ('Falco', 4), ('Sheik', 5)]",
+      "friendlyResponse": "The top 5 characters right now are Fox, Marth, Jigglypuff, Falco, and Sheik, in that order.",
+      "error": "None"
+    },
+    {
+      "question": "What is currently the highest-ranking character that has ever received an F or G ranking?",
+      "sql": "\nSELECT `Character`.name, MIN(`rank`) AS HighestRank\nFROM `Character`\nJOIN `TierEntry` ON `Character`.id = `TierEntry`.character_id\nWHERE `TierEntry`.tier IN ('F', 'G')\nGROUP BY `Character`.name\nORDER BY HighestRank ASC\nLIMIT 1;\n",
+      "queryRawResponse": "[('Mr. Game & Watch', 19)]",
+      "friendlyResponse": "The highest-ranking character that has ever received an F or G ranking is \"Mr. Game & Watch,\" who achieved a minimum rank of 19th.",
+      "error": "None"
+    },
+    {
+      "question": "What was the most popular character pick among top 100 players in 2022?",
+      "sql": "\nSELECT `Character`.`name`, COUNT(`Main`.`character_id`) AS `pick_count`\nFROM `Main`\nJOIN `Character` ON `Main`.`character_id` = `Character`.`id`\nJOIN `RankList` ON `Main`.`rank_list_id` = `RankList`.`id`\nJOIN `PlayerRanking` ON `Main`.`player_id` = `PlayerRanking`.`player_id` AND `Main`.`rank_list_id` = `PlayerRanking`.`rank_list_id`\nWHERE `RankList`.`rank_date` BETWEEN '2022-01-01' AND '2022-12-31'\nAND `PlayerRanking`.`rank` <= 100\nGROUP BY `Character`.`name`\nORDER BY `pick_count` DESC\nLIMIT 1;\n",
+      "queryRawResponse": "[('Fox', 35)]",
+      "friendlyResponse": "The most popular character pick among the top 100 players in 2022 was \"Fox,\" with 35 picks.",
+      "error": "None"
+    },
+    {
+      "question": "What were Armada's mains in 2015?",
+      "sql": "\nSELECT `Character`.`name`\nFROM `Main`\nJOIN `Player` ON `Main`.`player_id` = `Player`.`id`\nJOIN `Character` ON `Main`.`character_id` = `Character`.`id`\nJOIN `RankList` ON `Main`.`rank_list_id` = `RankList`.`id`\nWHERE `Player`.`player_tag` = 'Armada' AND strftime('%Y', `RankList`.`rank_date`) = '2015';\n",
+      "queryRawResponse": "[('Fox',), ('Peach',)]",
+      "friendlyResponse": "In 2015, Armada's mains were Fox and Peach.",
+      "error": "None"
+    }
+  ]
+}
