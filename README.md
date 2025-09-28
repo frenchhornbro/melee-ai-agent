@@ -1,4 +1,8 @@
-# ERD
+# MELEE-AI-AGENT
+
+This is an agentic workflow that allows a user to ask natural language questions about a database and receive natural language answers. This particular database comprises the top 100 ranked players for the Nintendo game Super Smash Bros Melee since 2013, as well as the historical tier lists ranking the various playable characters.
+
+# Database Model (Entity-Relationship Diagram)
 ![ERD.png](ERD.png)
 
 # Setup
@@ -56,5 +60,9 @@ I tried the following prompting strategies:
 - Single-domain Few-shot Text-to-SQL
 
 As illustrated above, double-shot was a little more effective because it provided an example that gave more context. It didn't appear more accurate aside from where the example provided specific clarity for ambiguous cases.
+
+# Data Sources
+[SSBMRank](https://liquipedia.net/smash/SSBMRank)
+[List of SSBM Tier Lists](https://www.ssbwiki.com/List_of_SSBM_tier_lists_(NTSC))
 
 _Note: I modified db_bot.py, its original version is [here](https://github.com/byu-cs-452/byu-cs-452-class-content/blob/main/aisql/db_bot.py)._
